@@ -28,6 +28,11 @@
 #include "q6voice.h"
 #include <sound/adsp_err.h>
 
+#ifdef CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE
+extern bool in_phone_call;
+#include <linux/input/doubletap2wake.h>
+#endif
+
 #define TIMEOUT_MS 300
 
 
@@ -5849,6 +5854,11 @@ int voc_end_voice_call(uint32_t session_id)
 	}
 
 	mutex_unlock(&v->lock);
+#ifdef CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE
+	in_phone_call = false;
+	DT2W_PRINFO("%s: Phone Call Ended, set the flag to %s\n",
+		__func__, (in_phone_call ? "true" : "false"));
+#endif
 	return ret;
 }
 
@@ -6162,6 +6172,11 @@ int voc_start_voice_call(uint32_t session_id)
 		}
 
 		v->voc_state = VOC_RUN;
+#ifdef CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE
+		in_phone_call = true;
+		DT2W_PRINFO("%s: Phone Call on Start, set the flag to %s\n",
+			__func__, (in_phone_call ? "true" : "false"));
+#endif
 	} else {
 		pr_err("%s: Error: Start voice called in state %d\n",
 			__func__, v->voc_state);

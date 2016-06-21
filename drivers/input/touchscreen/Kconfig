@@ -1214,4 +1214,15 @@ source "drivers/input/touchscreen/gt9xx/Kconfig"
 config WAKE_GESTURES
 	bool "wake gestures"
 
+config TOUCHSCREEN_DOUBLETAP2WAKE
+	tristate "DoubleTap2Wake for touchscreens"
+	select TOUCHSCREEN_PREVENT_SLEEP
+	default n
+
+config TOUCHSCREEN_PREVENT_SLEEP
+	bool "Inihibit sleep on modified touchscreen drivers"
+	default n
+	help
+	  This disables the sleep function of modified touchscreen drivers.
+
 endif

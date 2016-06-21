@@ -37,6 +37,10 @@
 #include <linux/sysfs.h>
 #include <linux/proc_fs.h>
 
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+#include <linux/input/prevent_sleep.h>
+bool dit_suspend = false;
+#endif
 
 #if defined(CONFIG_FB)
 #include <linux/notifier.h>
@@ -323,6 +327,9 @@ struct ft5x06_ts_data {
 	struct dentry *dir;
 	u16 addr;
 	bool suspended;
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+	bool prevent_sleep;
+#endif
 	char *ts_info;
 	u8 *tch_data;
 	u32 tch_data_len;
@@ -1272,11 +1279,47 @@ err_pinctrl_get:
 	return retval;
 }
 
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+static int dt2w_toggle_rebalance_irq(struct device *dev)
+{
+	struct ft5x06_ts_data *data = dev_get_drvdata(dev);
+
+	/*
+	 * Prema Chand Alugu (premaca@gmail.com)
+	 *
+	 * This function must be called only when we know that prevent_sleep state
+	 * has been changed while the screen off.
+	 */
+	if (data->prevent_sleep) {
+		// we have been with wake irqs so far [enable_irq_wake()]
+		disable_irq_wake(data->client->irq);
+		disable_irq(data->client->irq);
+		DT2W_PRINFO("%s: IRQ now disable_irq_wake()\n", __func__);
+		DT2W_PRINFO("%s: IRQ now disable_irq()\n", __func__);
+		DT2W_PRINFO("%s: Rebalanced IRQ while dt2w OFF "
+				"during screen-off\n", __func__);
+	} else {
+		// we have been with irqs so far [disable_irq()]
+		enable_irq(data->client->irq);
+		enable_irq_wake(data->client->irq);
+		DT2W_PRINFO("%s: IRQ now enable_irq()\n", __func__);
+		DT2W_PRINFO("%s: IRQ now enable_irq_wake()\n", __func__);
+		DT2W_PRINFO("%s: Rebalanced IRQ while dt2w ON "
+				"during screen-off\n", __func__);
+	}
+
+	return 0;
+}
+#endif
+
 #ifdef CONFIG_PM
 static int ft5x06_ts_start(struct device *dev)
 {
 	struct ft5x06_ts_data *data = dev_get_drvdata(dev);
 	int err;
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+	bool prevent_sleep = false;
+#endif
 
 	if (data->ts_pinctrl) {
 		err = pinctrl_select_state(data->ts_pinctrl,
@@ -1314,10 +1357,43 @@ static int ft5x06_ts_start(struct device *dev)
 
 	msleep(data->pdata->soft_rst_dly);
 
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+	ts_get_prevent_sleep(prevent_sleep);
+	if (prevent_sleep != data->prevent_sleep) {
+		/* 
+		 * Prema Chand Alugu (premaca@gmail.com)
+		 *
+		 * simply the rebalance requirement; the prevent_sleep state is
+		 * stored in the dev structure, if there is any change while
+		 * the screen was off, we definitely need to rebalance
+		 * the state could be changed by the following known events
+		 * 1. toggled has been modified while screen was off
+		 * 2. in_phone_call state changed while screen was off
+		 */
+	    dt2w_toggle_rebalance_irq(dev);
+	}
+	DT2W_PRINFO("%s: Prevent Sleep is computed as '%s'\n",
+			__func__, (prevent_sleep) ? "yes" : "no");
+	/* enable the key panel touches back again */
+	__set_bit(EV_KEY, data->input_dev->evbit);
+	input_sync(data->input_dev);
+
+	if (prevent_sleep) {
+		DT2W_PRINFO("%s: IRQ now disable_irq_wake()\n", __func__);
+		disable_irq_wake(data->client->irq);
+	} else {
+		DT2W_PRINFO("%s: IRQ now enable_irq()\n", __func__);
+		enable_irq(data->client->irq);
+	}
+#else
 	enable_irq(data->client->irq);
+#endif
 	data->irq_enabled = true;
 	data->suspended = false;
 
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+	data->prevent_sleep = prevent_sleep;
+#endif
 	return 0;
 
 err_gpio_configuration:
@@ -1335,8 +1411,26 @@ static int ft5x06_ts_stop(struct device *dev)
 	struct ft5x06_ts_data *data = dev_get_drvdata(dev);
 	char txbuf[2];
 	int i, err;
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+	bool prevent_sleep = false;
+#endif
 
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+	ts_get_prevent_sleep(prevent_sleep);
+	DT2W_PRINFO("%s: Prevent Sleep is computed as '%s'\n",
+			__func__, (prevent_sleep) ? "yes" : "no");
+	if (!prevent_sleep) {
+		DT2W_PRINFO("%s: IRQ now disable_irq()\n", __func__);
+		disable_irq(data->client->irq);
+		dit_suspend = false;
+	} else {
+		DT2W_PRINFO("%s: IRQ now enable_irq_wake()\n", __func__);
+		enable_irq_wake(data->client->irq);
+		dit_suspend = true;
+	}
+#else
 	disable_irq(data->client->irq);
+#endif
 	data->irq_enabled = false;
 
 	/* release all touches */
@@ -1349,7 +1443,12 @@ static int ft5x06_ts_stop(struct device *dev)
 
 	if (gpio_is_valid(data->pdata->reset_gpio)) {
 		txbuf[0] = FT_REG_PMODE;
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+		txbuf[1] = (!prevent_sleep) ? FT_PMODE_HIBERNATE :
+            FT_PMODE_ACTIVE;
+#else
 		txbuf[1] = FT_PMODE_HIBERNATE;
+#endif
 		ft5x06_i2c_write(data->client, txbuf, sizeof(txbuf));
 	}
 
@@ -1382,6 +1481,14 @@ static int ft5x06_ts_stop(struct device *dev)
 	}
 
 	data->suspended = true;
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+	if (prevent_sleep) {
+		/* disable the key panel touches */
+		__clear_bit(EV_KEY, data->input_dev->evbit);
+		input_sync(data->input_dev);
+	}
+	data->prevent_sleep = prevent_sleep;
+#endif
 
 	return 0;
 
@@ -3471,7 +3578,11 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 	* the interrupt trigger mode will be set in Device Tree with property
 	* "interrupts", so here we just need to set the flag IRQF_ONESHOT
 	*/
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+				IRQF_ONESHOT | IRQF_NO_SUSPEND,
+#else
 				IRQF_ONESHOT,
+#endif
 				client->dev.driver->name, data);
 	if (err) {
 		dev_err(&client->dev, "request irq failed\n");
