@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -839,7 +839,8 @@
 			<  2929 /*  384   MHz */ >,
 			<  4248 /*  556.8 MHz */ >,	/*SVS+*/
 			<  4541 /*  595.2 MHz */ >,	/*NOM*/
-			<  5126 /*  672   MHz */ >;	/*TURBO*/
+			<  5126 /*  672   MHz */ >,	/*NOM+*/
+			<  5645 /*  740   MHz */ >;	/*TURBO*/
 	};
 
 	mincpubw: qcom,mincpubw {
@@ -854,7 +855,8 @@
 			<  2929 /*  384   MHz */ >,
 			<  4248 /*  556.8 MHz */ >,
 			<  4541 /*  595.2 MHz */ >,
-			<  5126 /*  672   MHz */ >;
+			<  5126 /*  672   MHz */ >,
+			<  5645 /*  740   MHz */ >;
 	};
 
 	qcom,cpu-bwmon {
@@ -872,7 +874,7 @@
 		cpu-to-dev-map =
 			<  998400  4248 >,
 			< 1094400  4541 >,
-			< 1497600  5126 >;
+			< 1497600  5645 >;
 		};
 
 		mincpubw-cpufreq {
@@ -1395,12 +1397,12 @@
 		qcom,devfreq,freq-table = <50000000 200000000>;
 
 		qcom,pm-qos-irq-type = "affine_irq";
-		qcom,pm-qos-irq-latency = <13 281>;
+		qcom,pm-qos-irq-latency = <13 651>;
 
 		qcom,pm-qos-cpu-groups = <0x0f>;
-		qcom,pm-qos-cmdq-latency-us = <13 281>;
+		qcom,pm-qos-cmdq-latency-us = <13 651>;
 
-		qcom,pm-qos-legacy-latency-us = <13 281>;
+		qcom,pm-qos-legacy-latency-us = <13 651>;
 
 		qcom,msm-bus,name = "sdhc1";
 		qcom,msm-bus,num-cases = <9>;
@@ -1439,10 +1441,10 @@
 		qcom,large-address-bus;
 
 		qcom,pm-qos-irq-type = "affine_irq";
-		qcom,pm-qos-irq-latency = <13 281>;
+		qcom,pm-qos-irq-latency = <13 651>;
 
 		qcom,pm-qos-cpu-groups = <0x0f>;
-		qcom,pm-qos-legacy-latency-us = <13 281>;
+		qcom,pm-qos-legacy-latency-us = <13 651>;
 
 		qcom,msm-bus,name = "sdhc2";
 		qcom,msm-bus,num-cases = <8>;
@@ -1674,6 +1676,21 @@
 		qcom,proxy-timeout-ms = <100>;
 		qcom,firmware-name = "venus";
 		memory-region = <&venus_mem>;
+	};
+
+	mcd {
+		compatible = "qcom,mcd";
+		qcom,ce-hw-instance = <0>;
+		qcom,ce-device = <0>;
+		interrupts = <0 248 0>;
+		interrupt-names = "mcd_irq";
+		clocks = <&clock_gcc clk_crypto_clk_src>,
+			 <&clock_gcc clk_gcc_crypto_clk>,
+			 <&clock_gcc clk_gcc_crypto_ahb_clk>,
+			 <&clock_gcc clk_gcc_crypto_axi_clk>;
+		clock-names = "core_clk_src", "core_clk",
+				"iface_clk", "bus_clk";
+		qcom,ce-opp-freq = <100000000>;
 	};
 
 	qcom,msm-ssc-sensors {
