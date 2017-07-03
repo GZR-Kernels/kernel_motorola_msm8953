@@ -816,9 +816,11 @@ void msm_isp_increment_frame_id(struct vfe_device *vfe_dev,
 	struct msm_vfe_sof_info *sof_info = NULL;
 	enum msm_vfe_dual_hw_type dual_hw_type;
 	enum msm_vfe_dual_hw_ms_type ms_type;
+#ifdef SOFTWARE_SYNC_SLAVE_FRAME_ID_TO_MASTER
 	struct msm_vfe_sof_info *master_sof_info = NULL;
 	int32_t time, master_time, delta;
 	uint32_t sof_incr = 0;
+#endif
 	unsigned long flags;
 
 	if (vfe_dev->axi_data.src_info[frame_src].frame_id == 0)
@@ -841,6 +843,10 @@ void msm_isp_increment_frame_id(struct vfe_device *vfe_dev,
 	 * (in other words)
 	 * If SLAVE and Master active, don't increment slave frame_id.
 	 * Instead use Master frame_id for Slave.
+	 */
+#ifdef SOFTWARE_SYNC_SLAVE_FRAME_ID_TO_MASTER
+	/*
+	 * notice: SOFTWARE_SYNC_SLAVE_FRAME_ID_TO_MASTER is not define
 	 */
 	if ((dual_hw_type == DUAL_HW_MASTER_SLAVE) &&
 		(ms_type == MS_TYPE_SLAVE) &&
@@ -867,7 +873,9 @@ void msm_isp_increment_frame_id(struct vfe_device *vfe_dev,
 		 */
 		vfe_dev->axi_data.src_info[frame_src].frame_id =
 			master_sof_info->frame_id + sof_incr;
-	} else {
+	} else
+#endif
+	{
 		if (frame_src == VFE_PIX_0) {
 			vfe_dev->axi_data.src_info[frame_src].frame_id +=
 				vfe_dev->axi_data.src_info[frame_src].
