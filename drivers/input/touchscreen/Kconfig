@@ -1211,8 +1211,8 @@ config TOUCHSCREEN_SYNAPTICS_DSX_FW_UPDATE_MMI
 
 source "drivers/input/touchscreen/gt9xx/Kconfig"
 
-config WAKE_GESTURES
-	bool "wake gestures"
+config SCREEN_OFF_GESTURES
+	bool "screen off gestures"
 
 config TOUCHSCREEN_DOUBLETAP2WAKE
 	tristate "DoubleTap2Wake for touchscreens"

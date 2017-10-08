@@ -98,3 +98,4 @@ obj-$(CONFIG_TOUCHSCREEN_ATMEL_MXT_MMI)	+= atmel_mxt_ts_mmi.o
 obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_CTRL_ACCESS_BLK) += synaptics_dsx_control_access_block.o
 obj-$(CONFIG_WAKE_GESTURES)		+= wake_gestures.o
 obj-$(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)        += doubletap2wake.o
+obj-$(CONFIG_SCREEN_OFF_GESTURES)		+= screen_off_gestures.o
