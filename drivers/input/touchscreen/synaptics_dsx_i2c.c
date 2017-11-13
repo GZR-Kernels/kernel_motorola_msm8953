@@ -95,8 +95,8 @@
 
 #define tk_debug(fmt, args...)
 
-#ifdef CONFIG_WAKE_GESTURES
-#include <linux/wake_gestures.h>
+#ifdef CONFIG_SCREEN_OFF_GESTURES
+#include <linux/screen_off_gestures.h>
 static bool suspended = false;
 bool scr_suspended(void)
 {
@@ -1461,7 +1461,7 @@ clip_area:
 }
 
 /* ASCII names order MUST match enum */
-static const char const *ascii_names[] = { "aod", "stats", "folio",
+static const char *ascii_names[] = { "aod", "stats", "folio",
 	"charger", "wakeup", "fps", "query", "runtime", "na"
 };
 
@@ -2715,8 +2715,8 @@ static void synaptics_dsx_apply_modifiers(
 				wakeup = true;
 			if (!sleep && (patch->flags & FLAG_POWER_SLEEP))
 				sleep = true;
-#ifdef CONFIG_WAKE_GESTURES
-			if (!wakeup && (s2w_switch || dt2w_switch))
+#ifdef CONFIG_SCREEN_OFF_GESTURES
+			if (!wakeup && (gesture_swipe_right || gesture_swipe_left || gesture_swipe_down || gesture_swipe_up || dt2w_switch))
 				wakeup = true;
 #endif
 
@@ -2878,10 +2878,10 @@ static void synaptics_dsx_sensor_state(struct synaptics_rmi4_data *rmi4_data,
 		if (!rmi4_data->in_bootloader)
 			synaptics_dsx_apply_modifiers(rmi4_data, STATE_SUSPEND);
 
-		if (!rmi4_data->suspend_is_wakeable)
+		if (!rmi4_data->suspend_is_wakeable) {
 			synaptics_rmi4_irq_enable(rmi4_data, false);
-			break;
-
+		}
+                break;
 	case STATE_ACTIVE:
 		if (!rmi4_data->in_bootloader)
 			synaptics_dsx_apply_modifiers(rmi4_data, STATE_ACTIVE);
@@ -2893,10 +2893,10 @@ static void synaptics_dsx_sensor_state(struct synaptics_rmi4_data *rmi4_data,
 			pr_err("Active state without input device\n");
 		}
 
-		if (gStat.enabled)
+		if (gStat.enabled) {
 			statistics_start_timekeeping(rmi4_data);
-			break;
-
+		}
+                break;
 	case STATE_STANDBY:
 		synaptics_rmi4_irq_enable(rmi4_data, false);
 			break;
@@ -2945,9 +2945,10 @@ static void synaptics_dsx_sensor_state(struct synaptics_rmi4_data *rmi4_data,
 			pr_debug("de-allocated input device\n");
 		}
 
-		if (gStat.enabled)
+		if (gStat.enabled) {
 			statistics_stop_timekeeping();
-			break;
+		}
+		break;
 	}
 
 	pr_info("state change %s -> %s\n",
@@ -4400,8 +4401,8 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 
 	if (atomic_read(&rmi4_data->panel_off_flag)) {
 		synaptics_dsx_resumeinfo_ignore(rmi4_data);
-#ifdef CONFIG_WAKE_GESTURES
-		if (!s2w_switch && !dt2w_switch)
+#ifdef CONFIG_SCREEN_OFF_GESTURES
+		if (!gesture_swipe_right && !gesture_swipe_left && !gesture_swipe_down && !gesture_swipe_up && !dt2w_switch)
 #endif
 			return 0;
 	} else
@@ -4719,7 +4720,7 @@ static int synaptics_rmi4_f11_abs_report(struct synaptics_rmi4_data *rmi4_data,
 					__func__, finger,
 					x, y, wx, wy, z);
 
-#ifdef CONFIG_WAKE_GESTURES
+#ifdef CONFIG_SCREEN_OFF_GESTURES
 			if (suspended)
 				x += 5000;
 #endif
@@ -5061,12 +5062,12 @@ static void synaptics_rmi4_report_touch(struct synaptics_rmi4_data *rmi4_data,
 
 	case SYNAPTICS_RMI4_F12:
 		if (rmi4_data->suspend_is_wakeable) {
-#ifdef CONFIG_WAKE_GESTURES
-			if (!s2w_switch && !dt2w_switch) {
+#ifdef CONFIG_SCREEN_OFF_GESTURES
+			if (!gesture_swipe_right && !gesture_swipe_left && !gesture_swipe_down && !gesture_swipe_up && !dt2w_switch) {
 #endif
 				synaptics_rmi4_f12_wakeup_gesture(rmi4_data, fhandler);
 				break;
-#ifdef CONFIG_WAKE_GESTURES
+#ifdef CONFIG_SCREEN_OFF_GESTURES
 			}
 #endif
 		}
@@ -7794,7 +7795,7 @@ static int synaptics_rmi4_suspend(struct device *dev)
 			rmi4_data->board;
 	static char ud_stats[PAGE_SIZE];
 
-#ifdef CONFIG_WAKE_GESTURES
+#ifdef CONFIG_SCREEN_OFF_GESTURES
 	suspended = true;
 #endif
 
@@ -7863,7 +7864,7 @@ static int synaptics_rmi4_resume(struct device *dev)
 	const struct synaptics_dsx_platform_data *platform_data =
 					rmi4_data->board;
 
-#ifdef CONFIG_WAKE_GESTURES
+#ifdef CONFIG_SCREEN_OFF_GESTURES
 	suspended = false;
 #endif
 

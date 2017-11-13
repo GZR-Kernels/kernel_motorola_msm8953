@@ -103,13 +103,6 @@ void limStopTxAndSwitchChannel(tpAniSirGlobal pMac, tANI_U8 sessionId)
       return;
     }
 
-    if(pMac->ft.ftPEContext.pFTPreAuthReq)
-    {
-        limLog(pMac, LOGE,
-           FL("Avoid Switch Channel req during pre auth"));
-        return;
-    }
-
     limLog(pMac, LOG1, FL("Channel switch Mode == %d"),
                        psessionEntry->gLimChannelSwitch.switchMode);
 
@@ -1559,12 +1552,13 @@ tANI_U8 *pBody;
     }
     if (0 == frmAddBARsp.AddBAParameterSet.bufferSize)
         frmAddBARsp.AddBAParameterSet.bufferSize = val;
-    else
+    else {
         frmAddBARsp.AddBAParameterSet.bufferSize =
                     VOS_MIN(val, frmAddBARsp.AddBAParameterSet.bufferSize);
         limLog( pMac, LOG1,
             FL( "ADDBA RSP  Buffsize = %d" ),
             frmAddBARsp.AddBAParameterSet.bufferSize);
+    }
     // Now, validate the ADDBA Rsp
     if( eSIR_MAC_SUCCESS_STATUS !=
         __limValidateAddBAParameterSet( pMac, pSta,
