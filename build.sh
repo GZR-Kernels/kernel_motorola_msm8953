@@ -6,18 +6,40 @@
 
 set -e
 
+DATE_POSTFIX=$(date +"%Y%m%d")
+
 ## Copy this script inside the kernel directory
 KERNEL_DIR=$PWD
-KERNEL_TOOLCHAIN=$HOME/gcc/arm-cortex_a53-linux-gnueabihf/bin/arm-eabi-
-KERNEL_DEFCONFIG=potter_defconfig
+CROSS_COMPILE_PREFIX=arm-linux-androidkernel-
+KERNEL_TOOLCHAIN=$HOME/Android/Val/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9/bin/$CROSS_COMPILE_PREFIX
+KERNEL_DEFCONFIG=sanders_defconfig
 DTBTOOL=$KERNEL_DIR/Dtbtool/
 JOBS=8
 ANY_KERNEL2_DIR=$KERNEL_DIR/AnyKernel2/
-FINAL_KERNEL_ZIP=Optimus-R5-Potter.zip
+FINAL_KERNEL_ZIP=Drunk_Optimus_Sanders-$DATE_POSTFIX.zip
 
-# Clean build always lol
-echo "**** Cleaning ****"
-make clean && make mrproper
+while [[ $# -gt 0 ]]
+do
+key="$1"
+
+case $key in
+    clean)
+    CLEAN_BUILD=YES
+    #shift # past argument
+    ;;
+    *)
+            # unknown option
+    ;;
+esac
+shift # past argument or value
+done
+
+# Clean build optional
+if [ "$CLEAN_BUILD" == 'YES' ]
+then echo;
+    echo "**** Cleaning ****"
+    make clean && make mrproper
+fi
 
 # The MAIN Part
 echo "**** Setting Toolchain ****"
@@ -51,12 +73,19 @@ cp $KERNEL_DIR/arch/arm/boot/dtb $ANY_KERNEL2_DIR/
 echo "**** Time to zip up! ****"
 cd $ANY_KERNEL2_DIR/
 zip -r9 $FINAL_KERNEL_ZIP * -x README $FINAL_KERNEL_ZIP
-rm -rf $HOME/$FINAL_KERNEL_ZIP
-mv $HOME/optimus/AnyKernel2/$FINAL_KERNEL_ZIP $HOME/$FINAL_KERNEL_ZIP
 
+echo;
 echo "**** Good Bye!! ****"
+echo;
 cd $KERNEL_DIR
 rm -rf arch/arm/boot/dtb
 rm -rf AnyKernel2/zImage
 rm -rf AnyKernel2/dtb
 
+echo "#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#"
+echo "##                                                      ##"
+echo "##     KERNEL BUILD IS SUCCESSFUL                       ##"
+echo "##                                                      ##"
+echo "##     Flash this $ANY_KERNEL2_DIR/$FINAL_KERNEL_ZIP    ##"
+echo "##                                                      ##"
+echo "#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#"
